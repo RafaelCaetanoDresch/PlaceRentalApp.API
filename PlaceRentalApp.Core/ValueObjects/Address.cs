@@ -1,4 +1,4 @@
-﻿namespace PlaceRentalApp.API.ValueObjects;
+﻿namespace PlaceRentalApp.Core.ValueObjects;
 
 public record Address(string Street,
                       string Number,

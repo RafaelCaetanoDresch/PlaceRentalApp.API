@@ -1,10 +1,10 @@
-﻿namespace PlaceRentalApp.API.Entities;
+﻿namespace PlaceRentalApp.Core.Entities;
 
-public class PlaceAmenity  :BaseEntity
+public class PlaceAmenity : BaseEntity
 {
     protected PlaceAmenity() { }
     public PlaceAmenity(string description, int idPlace)
-        :base()
+        : base()
     {
         Description = description;
         IdPlace = idPlace;

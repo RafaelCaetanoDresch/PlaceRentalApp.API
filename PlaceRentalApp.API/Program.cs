@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlaceRentalApp.API.Middlewares;
-using PlaceRentalApp.API.Models;
-using PlaceRentalApp.API.Persistence;
+using PlaceRentalApp.Application.Services;
+using PlaceRentalApp.Infrastructure.Persistence;
 
 namespace PlaceRentalApp.API;
 
@@ -20,9 +20,8 @@ public class Program
         var min = builder.Configuration.GetValue<int>("PlacesConfig:MinDescription");
         var max = builder.Configuration.GetValue<int>("PlacesConfig:MaxDescription");
 
-        builder.Services.Configure<PlacesConfiguration>(
-            builder.Configuration.GetSection("PlacesConfig"));
-
+        builder.Services.AddScoped<IPlaceService, PlaceService>();
+        builder.Services.AddScoped<IUserService, UserService>();
 
         builder.Services.AddExceptionHandler<ApiExcepationHandler>();
         builder.Services.AddProblemDetails();

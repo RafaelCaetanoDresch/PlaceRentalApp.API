@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PlaceRentalApp.API.Entities;
-using PlaceRentalApp.API.Models;
-using PlaceRentalApp.API.Persistence;
+using PlaceRentalApp.Application.Models;
+using PlaceRentalApp.Application.Services;
 
 namespace PlaceRentalApp.API.Controllers;
 
@@ -9,20 +8,15 @@ namespace PlaceRentalApp.API.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly PlaceRentalDbContext _context;
+    private readonly IUserService _userService;
 
-    public UsersController(PlaceRentalDbContext context)
-    {
-        _context = context;
-    }
-
+    public UsersController(IUserService userService) 
+        => _userService = userService;
 
     [HttpGet("id")]
     public IActionResult GetById(int id)
     {
-        var user = _context.Users.SingleOrDefault(u => u.Id == id);
-        if (user is null) 
-            NotFound();
+        var user = _userService.GetById(id);
 
         return Ok(user);
     }
@@ -30,11 +24,8 @@ public class UsersController : ControllerBase
     [HttpPost]
     public IActionResult Post(CreateUserInputModel model)
     {
-        var user = new User(model.FullName, model.Email, model.BirthDate);
+        var id = _userService.Insert(model);
 
-        _context.Users.Add(user);
-        _context.SaveChanges();
-
-        return CreatedAtAction(nameof(GetById), new {id = user.Id }, model);
+        return CreatedAtAction(nameof(GetById), new { id }, model);
     }
 }

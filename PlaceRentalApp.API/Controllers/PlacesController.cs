@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PlaceRentalApp.API.Entities;
-using PlaceRentalApp.API.Models;
-using PlaceRentalApp.API.Persistence;
-using PlaceRentalApp.API.ValueObjects;
+using PlaceRentalApp.Application.Models;
+using PlaceRentalApp.Application.Services;
 
 namespace PlaceRentalApp.API.Controllers;
 
@@ -10,24 +8,18 @@ namespace PlaceRentalApp.API.Controllers;
 [ApiController]
 public class PlacesController : ControllerBase
 {
-    private readonly PlaceRentalDbContext _context;
+    private readonly IPlaceService _placeService;
 
-    public PlacesController(PlaceRentalDbContext context)
-    {
-        _context = context;
-    }
+    #region Constructor
+    public PlacesController(IPlaceService placeService)
+    => _placeService = placeService; 
+    #endregion
 
     //GET api/places?search=casa
     [HttpGet]
     public IActionResult Get(string search, DateTime startDate, DateTime endDate)
     {
-        var availablePlaces = _context.Places.Where(p => p.Title.Contains(search) &&
-                !p.Books.Any(b =>
-                (b.StartDate >= b.StartDate && startDate <= b.EndDate) ||
-                (b.EndDate >= b.StartDate && endDate <= b.EndDate) ||
-                (b.StartDate <= b.StartDate && endDate >= b.EndDate)
-                )
-                && !p.IsDeleted);
+        var availablePlaces = _placeService.GetAllAvailable(search, startDate, endDate);
 
         return Ok(availablePlaces);
     }
@@ -37,9 +29,7 @@ public class PlacesController : ControllerBase
     [HttpGet("{id}")]
     public IActionResult GetById(int id)
     {
-        var place = _context.Places.SingleOrDefault(p => p.Id == id);
-        if (place is null)
-            return NotFound();
+        var place = _placeService.GetById(id);
 
         return Ok(place);
     }
@@ -48,44 +38,16 @@ public class PlacesController : ControllerBase
     [HttpPost]
     public IActionResult Post(CreatePlaceInputModel model)
     {
-        var address = new Address(
-            model.Address.Street,
-            model.Address.Number,
-            model.Address.ZipCode,
-            model.Address.District,
-            model.Address.City,
-            model.Address.State,
-            model.Address.Country
-            );
+        var id = _placeService.Insert(model);
 
-        var place = new Place(
-            model.Title,
-            model.Description,
-            model.DailyPrice,
-            address,
-            model.AllowedNumberPerson,
-            model.AllowedPets,
-            model.CreatedBy
-            );
-
-        _context.Places.Add(place);
-        _context.SaveChanges();
-
-        return CreatedAtAction(nameof(GetById), new { id = place.Id }, model);
+        return CreatedAtAction(nameof(GetById), new { id }, model);
     }
 
     //PUT api/places
     [HttpPut]
     public IActionResult Put(int id, UpdatePlaceInputModel model)
     {
-        var place = _context.Places.SingleOrDefault(p => p.Id == id);
-        if (place is null)
-            return NotFound();
-
-        place.Update(model.Title, model.Description, model.DailyPrice);
-
-        _context.Places.Update(place);
-        _context.SaveChanges();
+        _placeService.Update(id, model);
 
         return NoContent();
     }
@@ -95,13 +57,7 @@ public class PlacesController : ControllerBase
     [HttpPost("{id}/amenities")]
     public IActionResult PostAmenity(int id, CreatePlaceAmenityInputModel model)
     {
-        var exists = _context.Places.Any(p => p.Id == id);
-        if (!exists)
-            return NotFound();
-
-        var amenity = new PlaceAmenity(model.Description, id);
-        _context.PlaceAmenities.Add(amenity);
-        _context.SaveChanges();
+        _placeService.InsertAmenity(id, model);
         return NoContent();
     }
 
@@ -110,14 +66,7 @@ public class PlacesController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        var place = _context.Places.SingleOrDefault(p => p.Id == id);
-        if (place is null)
-            return NotFound();
-
-        place.SetAsDeleted();
-
-        _context.Places.Update(place);
-        _context.SaveChanges();
+        _placeService.Delete(id);
 
         return NoContent();
     }
@@ -126,14 +75,7 @@ public class PlacesController : ControllerBase
     [HttpPost("{id}/books")]
     public IActionResult PostBook(int id, CreateBookInputModel model)
     {
-        var exists = _context.Places.Any(p => p.Id == id);
-        if (!exists)
-            return NotFound();
-
-        var book = new PlaceBook(model.IdUser, model.IdPlace, model.StartDate, model.EndDate, model.Comments);
-
-        _context.PlaceBooks.Add(book);
-        _context.SaveChanges();
+        _placeService.Book(id, model);
 
         return NoContent();
     }
@@ -142,18 +84,16 @@ public class PlacesController : ControllerBase
     [HttpPost("{id}/comments")]
     public IActionResult PostComment(int id, CreateCommentInputModel model)
     {
-        var place = _context.Places.SingleOrDefault(p => p.Id == id);
-        if (place is null)
-            return NotFound();
-        
-        
+        //var place = _context.Places.SingleOrDefault(p => p.Id == id);
+        //if (place is null)
+        //    return NotFound();
 
         return NoContent();
     }
 
     //PUT api/places/1234/photos
     [HttpPost("{id}/photos")]
-    public IActionResult PostComment(int id, IFormFile file)
+    public IActionResult PostPhotos(int id, IFormFile file)
     {
         var description = $"File: {file.Name}, Size: {file.Length}";
         using var ms = new MemoryStream();
